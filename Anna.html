@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>🌸 Anna</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg-top: #140d2a;
+  --bg-bottom: #030308;
+  --panel: rgba(10,0,20,0.75);
+  --accent: #ff71ce;
+  --text: #ffe9f8;
+  --panel-glow: rgba(255,113,206,0.12);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;padding:0}
+body{
+  font-family: "Press Start 2P", monospace;
+  color:var(--text);
+  background: radial-gradient(circle at 10% 10%, var(--bg-top), var(--bg-bottom));
+  transition: background 0.8s ease, color 0.8s ease;
+  overflow:hidden;
+}
+
+/* Header */
+header{
+  text-align:center;
+  padding:18px 10px;
+  font-size:20px;
+  letter-spacing:2px;
+  color:var(--text);
+  text-shadow: 0 0 14px var(--accent);
+}
+
+/* Layout */
+.container{
+  display:grid;
+  grid-template-columns: 2fr 1fr;
+  gap:18px;
+  padding:18px;
+  height: calc(100vh - 86px);
+}
+
+/* Panels */
+.panel{
+  background: linear-gradient(145deg, rgba(0,0,0,0.55), rgba(10,5,18,0.65));
+  border-radius:14px;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 24px var(--panel-glow);
+  transition: box-shadow 0.6s ease;
+}
+
+/* Output */
+#out{
+  flex:1;
+  background: rgba(0,0,0,0.92);
+  border-radius:10px;
+  padding:12px;
+  overflow:auto;
+  white-space:pre-wrap;
+  font-size:12px;
+  line-height:1.4;
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+/* Editor */
+textarea{
+  width:100%;
+  min-height:160px;
+  max-height:55vh;
+  resize:vertical;
+  background: rgba(0,0,0,0.94);
+  color:var(--text);
+  border: none;
+  border-radius:10px;
+  padding:12px;
+  font-family:inherit;
+  font-size:12px;
+  line-height:1.4;
+}
+
+/* Controls */
+.controls{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+button, select, input[type="file"]{
+  border:none;
+  border-radius:8px;
+  padding:10px 12px;
+  background: linear-gradient(90deg, var(--accent), #c46aa9);
+  color:white;
+  cursor:pointer;
+  font-family:inherit;
+  font-size:11px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+}
+select.theme-picker{ background:rgba(0,0,0,0.85); color:var(--text); padding:8px; }
+.small{ padding:8px 10px; font-size:11px; }
+
+/* Helper / examples */
+.code{
+  background: rgba(0,0,0,0.9);
+  border-radius:8px;
+  padding:10px;
+  font-size:12px;
+  white-space:pre-wrap;
+  line-height:1.35;
+}
+
+/* Theme indicator */
+.status{
+  margin-left:auto;
+  font-size:11px;
+  padding:6px 8px;
+  border-radius:8px;
+  background: rgba(255,255,255,0.02);
+}
+
+/* Flowers - decorative emoji floating */
+.flower{
+  position:absolute;
+  pointer-events:none;
+  font-size:26px;
+  opacity:0.9;
+  transform: translateY(0);
+  transition: transform 0.6s linear;
+}
+
+/* subtle float animation via keyframes + inline durations */
+@keyframes floatUp {
+  0% { transform: translateY(100vh) rotate(0deg) scale(0.9); opacity:0.9; }
+  50% { transform: translateY(30vh) rotate(180deg) scale(1.05); opacity:0.95; }
+  100% { transform: translateY(-10vh) rotate(360deg) scale(0.9); opacity:0.9; }
+}
+
+/* footer note */
+footer{
+  text-align:center;
+  font-size:10px;
+  opacity:0.8;
+  padding:8px;
+}
+</style>
+</head>
+
+<body>
+
+<header>🌸 Anna</header>
+
+<div class="container">
+
+  <!-- LEFT: Editor + Output -->
+  <div class="panel" style="position:relative; overflow:visible;">
+    <div id="out">Welcome to <strong>Anna</strong>. Try examples on the right and press RUN. (Type <code>vars</code> to view memory.)</div>
+
+    <textarea id="editor" placeholder="// Write Anna code here. Example:
+x := 1
+y := 2
+print x + y
+"></textarea>
+
+    <div class="controls">
+      <button id="runBtn" onclick="run()">Run</button>
+      <button onclick="clearOut()">Clear Output</button>
+      <button onclick="resetEnv()">Reset Memory</button>
+
+      <label style="display:flex; gap:6px; align-items:center;">
+        <select id="themeSelect" class="theme-picker" onchange="chooseTheme(this.value)">
+          <!-- options populated by JS -->
+        </select>
+      </label>
+
+      <button id="nextTheme" class="small" onclick="nextTheme()">Next Theme</button>
+      <button id="autoThemeBtn" class="small" onclick="toggleAuto()">Auto Theme: OFF</button>
+
+      <button onclick="downloadEnv()" class="small">Save Env</button>
+      <input type="file" id="envFile" style="display:none" onchange="uploadEnv(this.files)">
+      <button onclick="document.getElementById('envFile').click()" class="small">Load Env</button>
+
+      <div class="status" id="themeStatus">Theme: —</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Examples & Helper -->
+  <div class="panel">
+    <h3 style="margin:0 0 8px 0;">Examples</h3>
+
+    <select id="examples" class="theme-picker" onchange="loadExample(this.value)">
+      <option value="">— Select an example —</option>
+      <option value='x := 5
+y := 8
+print "sum = " + (x + y)'>Simple Math (Sum)</option>
+
+      <option value='name := "Anna"
+print "Hello, " + name'>Greeting</option>
+
+      <option value='a := 0
+b := 1
+print a
+print b
+c := a + b
+print c'>Fibonacci (step demonstration)</option>
+
+      <option value='nums := [1,2,3,4,5]
+total := nums[0] + nums[1] + nums[2] + nums[3] + nums[4]
+mean := total / len(nums)
+print "mean = " + mean'>Mean (array)</option>
+
+      <option value='random := rand()
+print "random = " + random'>Random number</option>
+
+      <option value='// generate first 8 fibonacci numbers into list
+f := [0,1]
+i := 2
+whilei := 8
+// Anna doesn't have loops by default; manual example shows step updates
+f1 := f[0]
+f2 := f[1]
+print "First two: " + f1 + ", " + f2'>Fibonacci (manual demo)</option>
+
+      <option value='// facts usage
+fact sky_blue
+fact water_wet
+print "facts:" 
+print facts'>Facts Example</option>
+
+      <option value='// show memory
+x := 42
+y := "life"
+vars'>View Variables (vars)</option>
+
+    </select>
+
+    <h3 style="margin-top:14px;">Helper</h3>
+    <div class="code" id="helper">
+      Anna quick reference:
+
+      • Assignment:  name := expression
+      • Print:       print expression
+      • View memory: vars
+      • Builtins:    sqrt(x), sin(x), cos(x), rand(), len(list)
+      • Save/Load env: Save Env / Load Env buttons
+      • Themes: Next Theme / Theme picker / Auto Theme
+      • Notes: Strings use quotes. Use + to concatenate strings & numbers (toString happens).
+    </div>
+
+    <h3 style="margin-top:12px; margin-bottom:6px;">More Commands</h3>
+    <div class="code">
+      • clearOut(): clears output (button)  
+      • resetEnv(): clears saved variables (button)  
+      • Save Env: downloads memory as JSON  
+      • Load Env: upload JSON to restore memory
+    </div>
+  </div>
+
+</div>
+
+<!-- Decorative flowers that float (emoji sprites) -->
+<div id="flowersContainer"></div>
+
+<footer>Anna</footer>
+
+<script>
+/* -------------------------
+   Anna interpreter + env
+   ------------------------- */
+const out = document.getElementById('out');
+const editor = document.getElementById('editor');
+const themeStatus = document.getElementById('themeStatus');
+const themeSelect = document.getElementById('themeSelect');
+
+let env = {};               // persistent environment
+env.facts = env.facts || []; // optional facts array
+
+function appendOut(text = '') {
+  out.innerText += text + '\n';
+  out.scrollTop = out.scrollHeight;
+}
+
+/* BUILTINS: safe helpers exposed to Anna expressions */
+const BUILTINS = {
+  sqrt: Math.sqrt,
+  sin: Math.sin,
+  cos: Math.cos,
+  rand: () => Math.random(),
+  len: (x) => (Array.isArray(x) || typeof x === 'string') ? x.length : 0,
+  // a helper to print from expressions
+  _print: (v) => { appendOut(String(v)); return v; }
+};
+
+/* EVALUATOR: safe-ish but local; evaluates expressions in the context of env & BUILTINS.
+   Returns undefined on error; errors are printed. */
+function evalExpr(expr) {
+  try {
+    // Wrap expression so that string concatenation and simple expressions evaluate.
+    // Use Function with with() for env & builtins to provide convenient access.
+    const fn = new Function('env', 'B',
+      `with(B) with(env) { return (${expr}); }`);
+    return fn(env, BUILTINS);
+  } catch (e) {
+    appendOut('Eval error: ' + e.message);
+    return undefined;
+  }
+}
+
+/* ANNA LANGUAGE: basic commands
+   - assignment: name := expr
+   - print expr
+   - vars (show memory)
+   - fact <word> stores in env.facts
+   - forget <word> removes from env.facts
+*/
+function runAnna(source) {
+  const lines = source.replace(/\r/g,'').split('\n');
+  for (let raw of lines) {
+    let line = raw.trim();
+    if (!line) continue;
+    // comment
+    if (line.startsWith('//')) continue;
+
+    // fact and forget commands
+    if (line.startsWith('fact ')) {
+      const payload = line.slice(5).trim();
+      if (payload) {
+        env.facts = env.facts || [];
+        env.facts.push(payload);
+      }
+      continue;
+    }
+    if (line.startsWith('forget ')) {
+      const payload = line.slice(7).trim();
+      env.facts = (env.facts || []).filter(x => x !== payload);
+      continue;
+    }
+
+    // vars
+    if (line === 'vars') {
+      try {
+        appendOut(JSON.stringify(env, null, 2));
+      } catch (e) {
+        appendOut('Error showing vars: ' + e.message);
+      }
+      continue;
+    }
+
+    // assignment: name := expr
+    const assignIndex = line.indexOf(':=');
+    if (assignIndex !== -1) {
+      const name = line.slice(0, assignIndex).trim();
+      const expr = line.slice(assignIndex + 2).trim();
+      if (!name.match(/^[A-Za-z_][A-Za-z0-9_]*$/)) {
+        appendOut('Invalid variable name: ' + name);
+        continue;
+      }
+      const val = evalExpr(expr);
+      env[name] = val;
+      continue;
+    }
+
+    // print command
+    if (line.startsWith('print ')) {
+      const expr = line.slice(6).trim();
+      let v = evalExpr(expr);
+      // if expression returned undefined due to error, skip
+      if (typeof v === 'undefined') {
+        // try to treat as literal or fallback
+        appendOut(String(expr));
+      } else {
+        appendOut(String(v));
+      }
+      continue;
+    }
+
+    // fallback: try evaluate as expression (ignored result)
+    const res = evalExpr(line);
+    if (typeof res === 'undefined') {
+      // if nothing valid, show warning
+      appendOut('Unknown command or invalid expression: ' + line);
+    }
+  }
+}
+
+/* UI helpers */
+function run() {
+  const code = editor.value;
+  if (!code.trim()) {
+    appendOut('(no code)');
+    return;
+  }
+  runAnna(code);
+}
+
+function clearOut() {
+  out.innerText = '';
+  appendOut('(output cleared)');
+}
+
+function resetEnv() {
+  env = {};
+  env.facts = [];
+  appendOut('(memory reset)');
+}
+
+/* Save/Load env */
+function downloadEnv() {
+  try {
+    const blob = new Blob([JSON.stringify(env, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'anna_env.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (e) {
+    appendOut('Save error: ' + e.message);
+  }
+}
+
+function uploadEnv(files) {
+  if (!files || !files[0]) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      env = parsed || {};
+      env.facts = env.facts || [];
+      appendOut('(env loaded)');
+    } catch (e) {
+      appendOut('Load error: ' + e.message);
+    }
+  };
+  reader.readAsText(files[0]);
+}
+
+/* Examples loader */
+function loadExample(value) {
+  if (!value) return;
+  editor.value = value;
+}
+
+/* -------------------------
+   Themes: manual + auto
+   ------------------------- */
+const THEMES = [
+  {
+    name: 'Pink Night',
+    top: '#140d2a',
+    bottom: '#030308',
+    panelGlow: 'rgba(255,113,206,0.14)',
+    accent: '#ff71ce',
+    text: '#ffe9f8'
+  },
+  {
+    name: 'Cyan Neon',
+    top: '#042b2e',
+    bottom: '#020717',
+    panelGlow: 'rgba(34,211,238,0.12)',
+    accent: '#22d3ee',
+    text: '#d0f7ff'
+  },
+  {
+    name: 'Crimson Dusk',
+    top: '#2a0b1a',
+    bottom: '#070206',
+    panelGlow: 'rgba(251,113,133,0.12)',
+    accent: '#fb7185',
+    text: '#ffeef0'
+  },
+  {
+    name: 'Verdant',
+    top: '#052e16',
+    bottom: '#021008',
+    panelGlow: 'rgba(74,222,128,0.10)',
+    accent: '#4ade80',
+    text: '#e8fff0'
+  }
+];
+
+let themeIndex = 0;
+let autoTheme = false;
+let autoTimer = null;
+
+function applyTheme(i) {
+  const t = THEMES[i];
+  document.documentElement.style.setProperty('--bg-top', t.top);
+  document.documentElement.style.setProperty('--bg-bottom', t.bottom);
+  document.documentElement.style.setProperty('--panel-glow', t.panelGlow);
+  document.documentElement.style.setProperty('--accent', t.accent);
+  document.documentElement.style.setProperty('--text', t.text);
+  themeStatus.innerText = 'Theme: ' + t.name;
+  // update select value
+  themeSelect.value = String(i);
+}
+
+function populateThemePicker() {
+  themeSelect.innerHTML = '';
+  THEMES.forEach((t, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx);
+    opt.textContent = t.name;
+    themeSelect.appendChild(opt);
+  });
+}
+populateThemePicker();
+applyTheme(themeIndex);
+
+/* manual next theme */
+function nextTheme() {
+  themeIndex = (themeIndex + 1) % THEMES.length;
+  applyTheme(themeIndex);
+}
+
+/* choose a specific theme */
+function chooseTheme(val) {
+  const i = parseInt(val);
+  if (!isNaN(i) && i >= 0 && i < THEMES.length) {
+    themeIndex = i;
+    applyTheme(themeIndex);
+  }
+}
+
+/* auto cycle toggle */
+function toggleAuto() {
+  autoTheme = !autoTheme;
+  const btn = document.getElementById('autoThemeBtn');
+  btn.innerText = 'Auto Theme: ' + (autoTheme ? 'ON' : 'OFF');
+  if (autoTheme) {
+    autoTimer = setInterval(() => {
+      nextTheme();
+    }, 4000);
+  } else {
+    clearInterval(autoTimer);
+    autoTimer = null;
+  }
+}
+
+/* -------------------------
+   Floating flowers generator
+   ------------------------- */
+const flowersContainer = document.getElementById('flowersContainer');
+
+function spawnFlower() {
+  const f = document.createElement('div');
+  f.className = 'flower';
+  // choose a flower emoji from a list for variety
+  const seeds = ['🌸','🌺','🌷','💮','🌼','🌻'];
+  f.textContent = seeds[Math.floor(Math.random() * seeds.length)];
+  // random x position
+  const x = Math.random() * (window.innerWidth - 40);
+  f.style.left = `${x}px`;
+  // random size
+  const size = 20 + Math.random() * 36;
+  f.style.fontSize = `${size}px`;
+  // random animation duration and delay
+  const dur = 12 + Math.random() * 18;
+  const delay = Math.random() * 4;
+  f.style.animation = `floatUp ${dur}s linear ${delay}s`;
+  flowersContainer.appendChild(f);
+  // remove after animation
+  setTimeout(() => { f.remove(); }, (dur + delay) * 1000 + 500);
+}
+
+// spawn flowers periodically, but not too many
+const flowerInterval = setInterval(spawnFlower, 900);
+
+/* -------------------------
+   Init small helpers
+   ------------------------- */
+document.getElementById('themeStatus').innerText = 'Theme: —';
+document.getElementById('runBtn').title = 'Run Anna code (assign with :=, print, vars, fact)';
+appendOut('Anna ready — enjoy the retro-futuristic studio 🌸');
+
+// expose some actions to global for convenience
+window.run = run;
+window.clearOut = clearOut;
+window.resetEnv = resetEnv;
+window.nextTheme = nextTheme;
+window.toggleAuto = toggleAuto;
+window.downloadEnv = downloadEnv;
+window.uploadEnv = uploadEnv;
+window.chooseTheme = chooseTheme;
+window.loadExample = loadExample;
+window.loadExample = loadExample;
+
+/* wire up theme select initial value */
+themeSelect.value = String(themeIndex);
+</script>
+</body>
+</html>
